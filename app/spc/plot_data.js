@@ -2,7 +2,7 @@ const map = require('../core/map/map');
 const set_layer_order = require('../core/map/setLayerOrder');
 const turf = require('@turf/turf');
 const luxon = require('luxon');
-const AtticPopup = require('../core/popup/AtticPopup');
+const ModPopup = require('../core/popup/AtticPopup');
 const ut = require('../core/utils');
 
 function _return_time_range(json) {
