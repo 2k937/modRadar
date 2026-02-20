@@ -4,7 +4,7 @@ const get_polygon_colors = require('../colors/polygon_colors');
 const turf = require('@turf/turf');
 const map = require('../../core/map/map');
 const set_layer_order = require('../../core/map/setLayerOrder');
-const AtticPopup = require('../../core/popup/AtticPopup');
+const ModPopup = require('../../core/popup/ModPopup');
 const display_attic_dialog = require('../../core/menu/attic_dialog');
 
 const all_watches_url = `https://www.spc.noaa.gov/products/watch/ActiveWW.kmz`; // https://www.spc.noaa.gov/products/watch/ActiveWW.kmz
@@ -24,9 +24,9 @@ function click_listener(e) {
 `<div style="font-weight: bold; font-size: 13px;">${properties.event}</div>
 <i id="${divid}" class="alert_popup_info icon-blue fa fa-circle-info" style="color: rgb(255, 255, 255);"></i>`;
 
-    const popup = new AtticPopup(e.lngLat, popup_html);
+    const popup = new ModPopup(e.lngLat, popup_html);
     popup.add_to_map();
-    popup.attic_popup_div.width(`+=${$('.alert_popup_info').outerWidth() + parseInt($('.alert_popup_info').css('paddingRight'))}`);
+    popup.ModPopup_div.width(`+=${$('.alert_popup_info').outerWidth() + parseInt($('.alert_popup_info').css('paddingRight'))}`);
     popup.update_popup_pos();
 
     $(`#${divid}`).on('click', function() {
