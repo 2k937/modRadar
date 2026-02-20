@@ -1,60 +1,74 @@
 const turf = require('@turf/turf');
 
 function fix_geojson_layering(geojson) {
-    // geojson.features = geojson.features.filter(feature => feature.properties.DN == 30 || feature.properties.DN == 10);
 
-    // convert all MultiPolygons to individual polygons within the FeatureCollection
-    geojson.features = geojson.features.flatMap(feature => {
+    if (!geojson || !geojson.features) return geojson;
+
+    /* ------------------------------
+       1. Flatten MultiPolygons
+    ------------------------------ */
+
+    const flattened = geojson.features.flatMap(feature => {
+        if (!feature.geometry) return [];
+
         if (feature.geometry.type === 'MultiPolygon') {
-            const multipolygon = feature.geometry;
-            return turf.getCoords(multipolygon).map(coords => turf.polygon(coords, feature.properties));
-        } else if (feature.geometry.type === 'Polygon') {
+            return turf.getCoords(feature).map(coords =>
+                turf.polygon(coords, { ...feature.properties })
+            );
+        }
+
+        if (feature.geometry.type === 'Polygon') {
             return feature;
         }
+
         return [];
     });
-    // for (var i = 0; i < geojson.features.length; i++) {
-    //     // console.log(geojson.features[i])
-    //     geojson.features[i].properties.id = i;
-    // }
-    // console.log(JSON.parse(JSON.stringify(geojson)))
 
-    var index = 0;
-    for (var i = 0; i < geojson.features.length; i++) {
-        const this_feature = geojson.features[i];
-        this_feature.properties.zindex = 0;
+    /* ------------------------------
+       2. Initialize zindex once
+    ------------------------------ */
 
-        for (var j = i + 1; j < geojson.features.length; j++) {
-            const next_feature = geojson.features[j];
-            next_feature.properties.zindex = 0;
+    flattened.forEach(f => {
+        f.properties = f.properties || {};
+        f.properties.zindex = 0;
+    });
 
-            const is_this_within = turf.booleanWithin(this_feature, next_feature);
-            const is_next_within = turf.booleanWithin(next_feature, this_feature);
-            // console.log(is_this_within, is_next_within);
-            // console.log(this_feature, next_feature);
+    /* ------------------------------
+       3. Containment + hole merging
+    ------------------------------ */
 
-            if (is_this_within) { // surrounding one (bigger one) is "next_feature"
-                const polygonA = next_feature.geometry.coordinates[next_feature.geometry.coordinates.length - 1];
-                const polygonB = this_feature.geometry.coordinates[0];
-                const is_equal = turf.booleanEqual(turf.polygon([polygonA]), turf.polygon([polygonB]));
-                if (!is_equal) {
-                    next_feature.geometry.coordinates.push(...this_feature.geometry.coordinates);
-                    index++;
-                    this_feature.properties.zindex = index;
-                }
-            } else if (is_next_within) { // surrounding one (bigger one) is "this_feature"
-                const polygonA = this_feature.geometry.coordinates[this_feature.geometry.coordinates.length - 1];
-                const polygonB = next_feature.geometry.coordinates[0];
-                const is_equal = turf.booleanEqual(turf.polygon([polygonA]), turf.polygon([polygonB]));
-                if (!is_equal) {
-                    this_feature.geometry.coordinates.push(...next_feature.geometry.coordinates);
-                    index++;
-                    next_feature.properties.zindex = index;
+    for (let i = 0; i < flattened.length; i++) {
+        const outer = flattened[i];
+
+        for (let j = 0; j < flattened.length; j++) {
+            if (i === j) continue;
+
+            const inner = flattened[j];
+
+            // If inner is fully within outer
+            if (turf.booleanWithin(inner, outer)) {
+
+                // Avoid duplicate merge
+                const alreadyMerged = outer.geometry.coordinates.some(ring =>
+                    turf.booleanEqual(
+                        turf.polygon([ring]),
+                        turf.polygon([inner.geometry.coordinates[0]])
+                    )
+                );
+
+                if (!alreadyMerged) {
+                    // Add as hole
+                    outer.geometry.coordinates.push(
+                        ...inner.geometry.coordinates
+                    );
+
+                    inner.properties.zindex = outer.properties.zindex + 1;
                 }
             }
         }
     }
 
+    geojson.features = flattened;
     return geojson;
 }
 
