@@ -10,21 +10,48 @@ const surface_fronts_layers = [
     'pressure_points_layer',
     'front_symbols_layer',
 ];
+
+// Ensure atticData exists
+if (!window.atticData) {
+    window.atticData = {};
+}
 window.atticData.surface_fronts_layers = surface_fronts_layers;
 
-armFunctions.toggleswitchFunctions($('#armrSurfaceFrontsBtnSwitchElem'), function() {
+// Safe helper
+function safeSetVisibility(layerId, visibility) {
+    if (map.getLayer && map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, 'visibility', visibility);
+    }
+}
+
+function enableSurfaceFronts() {
+    if (!map || !map.loaded || !map.loaded()) {
+        map.once('load', enableSurfaceFronts);
+        return;
+    }
+
     if (map.getLayer(surface_fronts_layers[0])) {
-        for (var i = 0; i < surface_fronts_layers.length; i++) {
-            // surface fronts layers already exist, simply toggle visibility here
-            map.setLayoutProperty(surface_fronts_layers[i], 'visibility', 'visible');
-        }
+        // Layers already exist → just show them
+        surface_fronts_layers.forEach(layer =>
+            safeSetVisibility(layer, 'visible')
+        );
     } else {
-        // surface fronts layers do not exist, load them into the map style
+        // Layers don't exist → fetch & add
         fetch_data();
     }
-}, function() {
-    for (var i = 0; i < surface_fronts_layers.length; i++) {
-        // hide the surface fronts layers
-        map.setLayoutProperty(surface_fronts_layers[i], 'visibility', 'none');
-    }
-})
+}
+
+function disableSurfaceFronts() {
+    surface_fronts_layers.forEach(layer =>
+        safeSetVisibility(layer, 'none')
+    );
+}
+
+// Ensure jQuery exists before using it
+if (typeof $ !== 'undefined') {
+    armFunctions.toggleswitchFunctions(
+        $('#armrSurfaceFrontsBtnSwitchElem'),
+        enableSurfaceFronts,
+        disableSurfaceFronts
+    );
+}
