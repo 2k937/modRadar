@@ -10,8 +10,6 @@ modRadar is a weather radar app designed to help people track storms, monitor se
 and stay informed about changing conditions in real time. Whether you're watching approaching rain, 
 snow, or severe storms, modRadar helps you stay prepared and aware.
 
-This app was made by an independent developer — a (recently graduated) high school student.
-
 modRadar is free to use and doesn't have any ads. 
 I hope that you enjoy the app! 
 
