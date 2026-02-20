@@ -2,7 +2,7 @@ const ut = require('../../core/utils');
 const kmz_to_geojson = require('../kmz_to_geojson');
 const set_layer_order = require('../../core/map/setLayerOrder');
 const map = require('../../core/map/map');
-const AtticPopup = require('../../core/popup/AtticPopup');
+const ModPopup = require('../../core/popup/ModPopup');
 
 function _click_listener(e) {
     const features = map.queryRenderedFeatures(e.point);
