@@ -2,127 +2,91 @@ const map = require('../core/map/map');
 const set_layer_order = require('../core/map/setLayerOrder');
 const turf = require('@turf/turf');
 const luxon = require('luxon');
- const ModPopup = require('../core/popup/ModPopup'); // FIXED
+const ModPopup = require('../core/popup/ModPopup');
 const ut = require('../core/utils');
 
-function _return_time_range(json) {
-    if (!json || !json.features || json.features.length === 0) {
-        return ['', ''];
-    }
+function return_time_range(json) {
+    if (!json?.features?.length) return ['', ''];
 
     let issue;
     let expire;
 
-    turf.propEach(json, (current_properties) => {
-        expire = current_properties.EXPIRE;
-        issue = current_properties.ISSUE;
+    turf.propEach(json, props => {
+        issue = props.ISSUE;
+        expire = props.EXPIRE;
     });
 
     if (!issue || !expire) return ['', ''];
 
-    function _parse_format_date_string(date_string) {
-        const date = luxon.DateTime.fromFormat(
-            date_string,
-            'yyyyMMddHHmm',
-            { zone: 'UTC' }
-        );
+    const parse = str => {
+        const d = luxon.DateTime.fromFormat(str, 'yyyyMMddHHmm', { zone: 'UTC' });
+        return d.isValid ? d.toLocal().toFormat('EEE MMM d, h:mm a') : '';
+    };
 
-        if (!date.isValid) return '';
-
-        return date.toLocal().toFormat('EEE MMM d, h:mm a');
-    }
-
-    const issue_formatted = _parse_format_date_string(issue);
-    const expire_formatted = _parse_format_date_string(expire);
-
-    return [issue_formatted, expire_formatted];
+    return [parse(issue), parse(expire)];
 }
 
-function _return_time_range_html(issue_formatted, expire_formatted) {
-    if (!issue_formatted && !expire_formatted) return '';
-
+function return_time_range_html(issue, expire) {
+    if (!issue && !expire) return '';
     return `
-<p style="margin: 0px; font-size: 11px">&nbsp;&nbsp;&nbsp;${issue_formatted} thru</p>
-<p style="margin: 0px; font-size: 11px">&nbsp;&nbsp;&nbsp;${expire_formatted}</p>`;
+<p style="margin:0;font-size:11px">&nbsp;&nbsp;&nbsp;${issue} thru</p>
+<p style="margin:0;font-size:11px">&nbsp;&nbsp;&nbsp;${expire}</p>`;
 }
 
-function _hide_layers() {
-    if (map.getLayer('spc_fill')) {
-        map.removeLayer('spc_fill');
-    }
-
-    if (map.getLayer('spc_border')) {
-        map.removeLayer('spc_border');
-    }
-
-    if (map.getSource('spc_source')) {
-        map.removeSource('spc_source');
-    }
+function hide_layers() {
+    if (map.getLayer?.('spc_fill')) map.removeLayer('spc_fill');
+    if (map.getLayer?.('spc_border')) map.removeLayer('spc_border');
+    if (map.getSource?.('spc_source')) map.removeSource('spc_source');
 }
 
-function _get_text_url(category, day) {
+function get_text_url(category, day) {
     if (category === 'Categorical') {
         return `https://tgftp.nws.noaa.gov/data/raw/ac/acus0${day}.kwns.swo.dy${day}.txt`;
     }
     return null;
 }
 
-function _click_listener(e) {
-    const features = map.queryRenderedFeatures(e.point);
-    if (!features.length) return;
-
-    if (features[0].layer.id === "stationSymbolLayer") return;
-
-    const properties = e.features?.[0]?.properties;
-    if (!properties) return;
+function click_listener(e) {
+    const feature = e.features?.[0];
+    if (!feature || feature.layer.id === 'stationSymbolLayer') return;
 
     let current_info = $('#spcDataInfo').find('b').text();
-    current_info = current_info.split(' ');
-    const category = current_info[0];
-    const day = current_info[current_info.length - 1];
+    const parts = current_info.split(' ');
+    const category = parts[0];
+    const day = parts[parts.length - 1];
 
-    const text_url = _get_text_url(category, day);
+    const text_url = get_text_url(category, day);
 
     if (text_url) {
         fetch(ut.phpProxy + text_url)
-            .then(response => response.text())
-            .then(text => {
-                console.log(text);
-            })
+            .then(r => r.text())
+            .then(text => console.log(text))
             .catch(err => console.error(err));
     }
 
-    const popup_html = `
-<div><b>${properties.LABEL2 || ''}</b></div>
-`;
-
-    new AtticPopup(e.lngLat, popup_html).add_to_map();
+    const popup_html = `<div><b>${feature.properties?.LABEL2 || ''}</b></div>`;
+    new ModPopup(e.lngLat, popup_html).add_to_map();
 }
 
 function plot_data(geojson, formatted_day, formatted_category) {
     if (!geojson) return;
 
-    const is_empty = !geojson.features || geojson.features.length === 0;
+    const is_empty = !geojson.features?.length;
+    const [issue, expire] = return_time_range(geojson);
 
-    const [issue_formatted, expire_formatted] =
-        _return_time_range(geojson);
-
-    let spc_info_html =
-`<b>${formatted_category} - ${formatted_day}</b>`;
+    let html = `<b>${formatted_category} - ${formatted_day}</b>`;
 
     if (is_empty) {
-        spc_info_html +=
-`<p style="margin: 0px; font-size: 13px; font-weight: bold" class="old-file">EMPTY DATA</p>`;
+        html += `<p style="margin:0;font-size:13px;font-weight:bold" class="old-file">EMPTY DATA</p>`;
     }
 
-    spc_info_html +=
-`<i class="helperText" style="opacity: 50%">
-${_return_time_range_html(issue_formatted, expire_formatted)}
+    html += `<i class="helperText" style="opacity:50%">
+${return_time_range_html(issue, expire)}
 </i>`;
 
-    $('#spcDataInfo').html(spc_info_html);
+    $('#spcDataInfo').html(html);
 
-    _hide_layers();
+    hide_layers();
 
     map.addSource('spc_source', {
         type: 'geojson',
@@ -136,7 +100,7 @@ ${_return_time_range_html(issue_formatted, expire_formatted)}
         paint: {
             'fill-outline-color': ['get', 'stroke'],
             'fill-color': ['get', 'fill'],
-            'fill-opacity': 1,
+            'fill-opacity': 1
         },
         layout: {
             'fill-sort-key': ['get', 'zindex']
@@ -158,8 +122,8 @@ ${_return_time_range_html(issue_formatted, expire_formatted)}
 
     set_layer_order();
 
-    map.off('click', 'spc_fill', _click_listener);
-    map.on('click', 'spc_fill', _click_listener);
+    map.off('click', 'spc_fill', click_listener);
+    map.on('click', 'spc_fill', click_listener);
 }
 
 module.exports = plot_data;
