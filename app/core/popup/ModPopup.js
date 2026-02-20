@@ -1,6 +1,6 @@
 const map = require('../map/map');
 
-class AtticPopup {
+class ModPopup {
     constructor (lngLat, html_content) {
         if (Array.isArray(lngLat)) {
             lngLat = new mapboxgl.LngLat(...lngLat);
@@ -13,12 +13,12 @@ class AtticPopup {
     }
 
     _init() {
-        $('.attic_popup').remove();
-        this.attic_popup_div = $('<div>', { 'class': 'attic_popup' }).html(this.html_content);
+        $('.mod_popup').remove();
+        this.mod_popup_div = $('<div>', { 'class': 'Mod_popup' }).html(this.html_content);
     }
 
     add_to_map() {
-        $('body').append(this.attic_popup_div);
+        $('body').append(this.Mod_popup_div);
         this.update_popup_pos();
 
         map.on('move', this._move);
@@ -26,7 +26,7 @@ class AtticPopup {
     }
 
     remove() {
-        this.attic_popup_div.remove();
+        this.Mod_popup_div.remove();
 
         map.off('move', this._move);
         map.off('click', this._click);
@@ -36,9 +36,9 @@ class AtticPopup {
         const pixel_coords = map.project(this.lngLat);
 
         const triangle_height = 10;
-        const left = pixel_coords.x - (this.attic_popup_div.outerWidth() / 2);
-        const top = pixel_coords.y - (this.attic_popup_div.outerHeight() - $('#radarHeader').height()) - triangle_height;
-        this.attic_popup_div.css({ 'left': left, 'top': top });
+        const left = pixel_coords.x - (this.Mod_popup_div.outerWidth() / 2);
+        const top = pixel_coords.y - (this.Mod_popup_div.outerHeight() - $('#radarHeader').height()) - triangle_height;
+        this.Mod_popup_div.css({ 'left': left, 'top': top });
     }
 
     _move = () => { this.update_popup_pos.apply(this, []) };
@@ -56,7 +56,7 @@ class AtticPopup {
     //     function _popup_click(e) {
     //         $('.attic_popup').remove();
     //         attic_popup_div = $('<div>', { 'class': 'attic_popup' });
-    //         $('body').append(attic_popup_div);
+    //         $('body').append(Mod_popup_div);
 
     //         click_lngLat = e.lngLat;
     //         update_popup_pos(click_lngLat);
