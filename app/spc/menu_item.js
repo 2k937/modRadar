@@ -3,19 +3,26 @@ const armFunctions = require('../core/menu/atticRadarMenu');
 const fetch_spc_data = require('./fetch_data');
 
 function hide_layers() {
-    if (!map) return;
+    if (!map || !map.getStyle) return;
 
-    if (map.getLayer?.('spc_fill')) {
-        map.removeLayer('spc_fill');
-    }
+    const style = map.getStyle();
+    if (!style) return;
 
-    if (map.getLayer?.('spc_border')) {
-        map.removeLayer('spc_border');
-    }
+    style.layers.forEach(layer => {
+        if (layer.id.toLowerCase().includes('spc')) {
+            if (map.getLayer(layer.id)) {
+                map.removeLayer(layer.id);
+            }
+        }
+    });
 
-    if (map.getSource?.('spc_source')) {
-        map.removeSource('spc_source');
-    }
+    Object.keys(style.sources).forEach(sourceId => {
+        if (sourceId.toLowerCase().includes('spc')) {
+            if (map.getSource(sourceId)) {
+                map.removeSource(sourceId);
+            }
+        }
+    });
 }
 
 function load_spc_toggleswitch(items_list) {
@@ -31,6 +38,7 @@ function load_spc_toggleswitch(items_list) {
 
             function () {
                 const run = () => {
+                    hide_layers();
                     $('.spcToggleswitchBtn').prop('checked', false);
                     elem.prop('checked', true);
                     fetch_spc_data(type, category, day);
