@@ -2,56 +2,55 @@ const fetch_data = require('./fetch_data');
 const armFunctions = require('../core/menu/atticRadarMenu');
 const map = require('../core/map/map');
 
-const div_elem = '#surfaceFrontsMenuItemDiv';
-const icon_elem = '#surfaceFrontsMenuItemIcon';
-
 const surface_fronts_layers = [
     'fronts_layer',
     'pressure_points_layer',
     'front_symbols_layer',
 ];
 
-// Ensure atticData exists
-if (!window.atticData) {
-    window.atticData = {};
-}
-window.atticData.surface_fronts_layers = surface_fronts_layers;
-
-// Safe helper
-function safeSetVisibility(layerId, visibility) {
-    if (map.getLayer && map.getLayer(layerId)) {
-        map.setLayoutProperty(layerId, 'visibility', visibility);
-    }
-}
+// State tracking to prevent "ghost" layers if fetch finishes after disable
+let isEnabled = false;
 
 function enableSurfaceFronts() {
-    if (!map || !map.loaded || !map.loaded()) {
+    isEnabled = true;
+    
+    if (!map.loaded()) {
         map.once('load', enableSurfaceFronts);
         return;
     }
 
+    // Check if the FIRST layer exists in the style
     if (map.getLayer(surface_fronts_layers[0])) {
-        // Layers already exist → just show them
-        surface_fronts_layers.forEach(layer =>
-            safeSetVisibility(layer, 'visible')
-        );
+        surface_fronts_layers.forEach(layer => {
+            if (map.getLayer(layer)) {
+                map.setLayoutProperty(layer, 'visibility', 'visible');
+            }
+        });
     } else {
-        // Layers don't exist → fetch & add
-        fetch_data();
+        // Only fetch if we aren't already in the middle of a request
+        // and ensure the user still wants them enabled when the data arrives
+        fetch_data().then(() => {
+            if (!isEnabled) disableSurfaceFronts();
+        }).catch(err => console.error("Fronts fetch failed:", err));
     }
 }
 
 function disableSurfaceFronts() {
-    surface_fronts_layers.forEach(layer =>
-        safeSetVisibility(layer, 'none')
-    );
+    isEnabled = false;
+    surface_fronts_layers.forEach(layer => {
+        if (map.getLayer(layer)) {
+            map.setLayoutProperty(layer, 'visibility', 'none');
+        }
+    });
 }
 
-// Ensure jQuery exists before using it
+// Initialization
 if (typeof $ !== 'undefined') {
-    armFunctions.toggleswitchFunctions(
-        $('#armrSurfaceFrontsBtnSwitchElem'),
-        enableSurfaceFronts,
-        disableSurfaceFronts
-    );
+    $(document).ready(() => {
+        armFunctions.toggleswitchFunctions(
+            $('#armrSurfaceFrontsBtnSwitchElem'),
+            enableSurfaceFronts,
+            disableSurfaceFronts
+        );
+    });
 }
