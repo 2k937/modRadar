@@ -8,21 +8,21 @@ function hide_layers() {
     const style = map.getStyle();
     if (!style) return;
 
-    style.layers.forEach(layer => {
-        if (layer.id.toLowerCase().includes('spc')) {
-            if (map.getLayer(layer.id)) {
-                map.removeLayer(layer.id);
+    if (style.layers) {
+        style.layers.forEach(layer => {
+            if (layer.id.toLowerCase().includes('spc')) {
+                if (map.getLayer(layer.id)) map.removeLayer(layer.id);
             }
-        }
-    });
+        });
+    }
 
-    Object.keys(style.sources).forEach(sourceId => {
-        if (sourceId.toLowerCase().includes('spc')) {
-            if (map.getSource(sourceId)) {
-                map.removeSource(sourceId);
+    if (style.sources) {
+        Object.keys(style.sources).forEach(sourceId => {
+            if (sourceId.toLowerCase().includes('spc')) {
+                if (map.getSource(sourceId)) map.removeSource(sourceId);
             }
-        }
-    });
+        });
+    }
 }
 
 function load_spc_toggleswitch(items_list) {
@@ -35,7 +35,6 @@ function load_spc_toggleswitch(items_list) {
 
         armFunctions.toggleswitchFunctions(
             elem,
-
             function () {
                 const run = () => {
                     hide_layers();
@@ -50,7 +49,6 @@ function load_spc_toggleswitch(items_list) {
                     run();
                 }
             },
-
             function () {
                 hide_layers();
             }

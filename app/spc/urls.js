@@ -88,7 +88,4 @@ const urls = {
     }
 };
 
-module.exports = Object.freeze({
-    urls,
-    getSpcUrl: (type, category, day) => urls?.[type]?.[category]?.[day] || null
-});
+module.exports = urls;

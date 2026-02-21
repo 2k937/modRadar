@@ -1,34 +1,35 @@
 const turf = require('@turf/turf');
 
 function fix_geojson_layering(geojson) {
-    if (!geojson || !Array.isArray(geojson.features)) return geojson;
+    // SAFETY CHECK: If the fetch failed (403), geojson is undefined.
+    // This stops the "Cannot read properties of undefined (reading 'flatMap')" error.
+    if (!geojson || !geojson.features || !Array.isArray(geojson.features)) {
+        console.error("SPC Data Error: No features found. The proxy might be blocked.");
+        return { type: "FeatureCollection", features: [] };
+    }
 
-    const flattened = [];
-
-    geojson.features.forEach(feature => {
-        if (!feature.geometry) return;
-
+    // Now it is safe to use flatMap or forEach
+    const flattenedFeatures = geojson.features.flatMap(feature => {
+        if (!feature.geometry) return [];
+        
+        const props = feature.properties || {};
+        
         if (feature.geometry.type === 'MultiPolygon') {
-            feature.geometry.coordinates.forEach(coords => {
-                flattened.push(
-                    turf.polygon(coords, { ...feature.properties })
-                );
-            });
+            return feature.geometry.coordinates.map(coords => turf.polygon(coords, props));
         } else if (feature.geometry.type === 'Polygon') {
-            flattened.push(
-                turf.polygon(feature.geometry.coordinates, { ...feature.properties })
-            );
+            return [turf.polygon(feature.geometry.coordinates, props)];
         }
+        return [];
     });
 
-    flattened.forEach(f => {
-        f.geometry = turf.rewind(f.geometry, { reverse: false });
-    });
+    const collection = turf.featureCollection(flattenedFeatures);
 
-    return {
-        type: 'FeatureCollection',
-        features: flattened
-    };
+    try {
+        // Mapbox requires the Right-Hand Rule (reverse: true) for fills to show up
+        return turf.rewind(collection, { reverse: true, mutate: true });
+    } catch (e) {
+        return collection;
+    }
 }
 
 module.exports = fix_geojson_layering;
